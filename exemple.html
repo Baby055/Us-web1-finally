@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animation Machine à Écrire</title>
+    <style>
+        body {
+            background-color: #121212;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .typing-container {
+            color: #00ff00;
+            font-size: 1.5rem;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+            border-right: 3px solid #00ff00;
+            padding-right: 5px;
+            white-space: pre-wrap; /* Permet le retour à la ligne */
+            width: 500px; /* Largeur fixe */
+            overflow: hidden;
+            min-height: 150px; /* Hauteur minimale */
+        }
+        
+        .cursor {
+            animation: blink 0.7s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        
+        .emoji {
+            font-size: 1.4rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="typing-container" id="typing-text"></div>
+
+    <script>
+        const text = "🎮💻 Préparez-vous à défier vos réflexes, votre rapidité et votre précision dans une aventure où chaque frappe compte.";
+        const typingElement = document.getElementById('typing-text');
+        let i = 0;
+        let isDeleting = false;
+        let typingSpeed = 100;
+        let currentTimeout;
+        
+        function typeWriter() {
+            const currentText = text.substring(0, i);
+            
+            // On ajoute le curseur à la fin
+            typingElement.innerHTML = currentText + '<span class="cursor">|</span>';
+            
+            if (!isDeleting) {
+                // Mode écriture
+                typingSpeed = 70 + Math.random() * 50; // vitesse aléatoire
+                
+                // Ralentir pour les emojis et ponctuation
+                if (i > 0 && (text[i-1] === '🎮' || text[i-1] === '💻' || ['.', ',', '!', '?'].includes(text[i-1]))) {
+                    typingSpeed = 300;
+                }
+                
+                i++;
+                
+                // Quand on arrive à la fin, on passe en mode suppression
+                if (i > text.length) {
+                    isDeleting = true;
+                    typingSpeed = 2000; // pause avant de supprimer
+                }
+            } else {
+                // Mode suppression
+                typingSpeed = 30 + Math.random() * 30;
+                i--;
+                
+                // Quand tout est supprimé, on recommence
+                if (i === 0) {
+                    isDeleting = false;
+                    typingSpeed = 1000; // pause avant de recommencer
+                }
+            }
+            
+            currentTimeout = setTimeout(typeWriter, typingSpeed);
+        }
+        
+        // Démarrer l'animation
+        typeWriter();
+    </script>
+</body>
+</html>
