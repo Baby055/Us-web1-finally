@@ -241,3 +241,74 @@ h1 {
 .stat-value#wpm::after {
   content: '%';
 }
+
+#end-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  gap: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: fadeIn 0.5s ease-out;
+}
+
+#end-message {
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  border: 2px solid #4cc9f0;
+  border-radius: 12px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 500px;
+  text-align: center;
+  box-shadow: 0 0 30px rgba(76, 201, 240, 0.3);
+}
+
+#end-message h2 {
+  color: #4cc9f0;
+  font-size: 1.8rem;
+  margin-bottom: 1.5rem;
+  text-shadow: 0 0 10px rgba(76, 201, 240, 0.5);
+}
+
+#end-message p {
+  margin: 0.8rem 0;
+  font-size: 1.1rem;
+}
+
+#continue-btn, #change-difficulty-btn {
+  padding: 0.8rem 1.5rem;
+  margin: 0.5rem;
+  border: none;
+  border-radius: 50px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 1rem;
+}
+
+#continue-btn {
+  background: #4cc9f0;
+  color: #1a1a2e;
+}
+
+#change-difficulty-btn {
+  background: transparent;
+  color: #4cc9f0;
+  border: 2px solid #4cc9f0;
+}
+
+#continue-btn:hover, #change-difficulty-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(76, 201, 240, 0.4);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

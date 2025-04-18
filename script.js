@@ -1,239 +1,183 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // Éléments du DOM
-    const wordDisplay = document.getElementById('word-display');
-    const inputField = document.getElementById('input-field');
-    const timeDisplay = document.getElementById('time');
-    const wpmDisplay = document.getElementById('wpm');
-    const scoreDisplay = document.getElementById('score');
-    const timeBar = document.getElementById('time-bar');
-    const resultsDisplay = document.getElementById('results');
-    const modeSelector = document.getElementById('mode');
-    const challengeWord = document.getElementById('challenge-word');
-    const restartBtn = document.getElementById('restart-btn');
+const wordDisplay = document.getElementById("word-display");
+const inputField = document.getElementById("input-field");
+const scoreDisplay = document.getElementById("score");
+const timeDisplay = document.getElementById("time");
+const wpmDisplay = document.getElementById("wpm");
+const modeSelect = document.getElementById("mode");
+const endScreen = document.getElementById("end-screen");
+const endMessage = document.getElementById("end-message");
+const continueBtn = document.getElementById("continue-btn");
+const changeDifficultyBtn = document.getElementById("change-difficulty-btn");
 
-    // Variables du jeu
-    let timeLeft = 0;
-    let timer;
-    let isPlaying = false;
-    let score = 0;
-    let wordsTyped = 0;
-    let currentWord = '';
-    let startTime;
-    let lastTypedTime = 0;
-    let typingSpeeds = [];
-    let averageTypingSpeed = 0;
+const words = {
+  easy: [
+    "happy", "mouse", "house", "light", "water",
+    "music", "apple", "juice", "beach", "smile",
+    "heart", "dream", "cloud", "party", "pizza",
+    "tiger", "ocean", "radio", "zebra", "candy"
+  ],
+  medium: [
+    "keyboard", "elephant", "sunshine", "mountain", "computer",
+    "digital", "awesome", "rainbow", "victory", "warlike",
+    "adventure", "birthday", "chocolate", "dinosaur", "fireworks",
+    "guitar", "hamburger", "internet", "jellyfish", "kangaroo"
+  ],
+  hard: [
+    "javascript", "extravaganza", "quintessential", "magnificent",
+    "phenomenon", "superficial", "highfalutin", "architecture",
+    "reactjs", "dependencies", "asynchronous", "blockchain",
+    "cryptography", "destructuring", "encyclopedia", "functionality",
+    "grandiose", "heterogeneous", "implementation", "juxtaposition"
+  ]
+};
+
+
+let currentWord;
+let score = 0;
+let timeLeft = 10;
+let difficulty = "easy";
+let gameTimer;
+let usedWords = [];
+let startTime;
+let charactersTyped = 0;
+let correctCharacters = 0;
+
+
+function initGame() {
+  difficulty = localStorage.getItem('difficulty') || 'easy';
+  modeSelect.value = difficulty;
+  usedWords = [];
+  score = 0;
+  timeLeft = 10;
+  charactersTyped = 0;
+  correctCharacters = 0;
+  
+  currentWord = words[difficulty][0];
+  usedWords.push(currentWord);
+  wordDisplay.textContent = currentWord;
+  
+  updateDisplay();
+  startTimer();
+  
+  inputField.value = "";
+  inputField.focus();
+  
+  startTime = new Date();
+  
+  endScreen.style.display = "none";
+}
+
+function getNewWord() {
+  const availableWords = words[difficulty].filter(word => !usedWords.includes(word));
+  
+  if (availableWords.length === 0) {
+    endGame(true); 
+    return;
+  }
+  
+  const randomIndex = Math.floor(Math.random() * availableWords.length);
+  currentWord = availableWords[randomIndex];
+  usedWords.push(currentWord);
+  wordDisplay.textContent = currentWord;
+}
+
+function updateDisplay() {
+  scoreDisplay.textContent = score;
+  timeDisplay.textContent = timeLeft + "s";
+  updateWPM();
+}
+
+function updateWPM() {
+  if (!startTime) return;
+  
+  const timeElapsed = (new Date() - startTime) / 60000; // en minutes
+  const wpm = Math.round((correctCharacters / 5) / timeElapsed) || 0;
+  wpmDisplay.textContent = wpm;
+}
+
+
+function calculateAccuracy() {
+  return charactersTyped > 0 ? Math.round((correctCharacters / charactersTyped) * 100) : 100;
+}
+
+
+function startTimer() {
+  clearInterval(gameTimer);
+  gameTimer = setInterval(() => {
+    timeLeft--;
+    updateDisplay();
     
-    const difficultySettings = {
-      easy: { 
-        time: 15, 
-        words: ['chat', 'chien', 'maison', 'arbre', 'fleur', 'soleil', 'lune', 'ciel', 'terre', 'eau'],
-        baseSpeed: 30 // vitesse de référence pour 100%
-      },
-      medium: { 
-        time: 12, 
-        words: ['ordinateur', 'programmation', 'développeur', 'interface', 'algorithme', 
-                'réseau', 'système', 'base de données', 'application', 'technologie'],
-        baseSpeed: 20
-      },
-      hard: { 
-        time: 10, 
-        words: ['anticonstitutionnellement', 'phénoménologie', 'épistémologique', 
-                'incompréhensibilité', 'internationalisation', 'interdisciplinarité',
-                'contemporanéité', 'institutionnalisation', 'désintermédiation'],
-        baseSpeed: 10
-      }
-    };
-    let currentDifficulty = 'easy';
-
-    // Initialisation du jeu
-    function initGame() {
-      restartBtn.style.display = 'none';
-      currentDifficulty = modeSelector.value;
-      const settings = difficultySettings[currentDifficulty];
-      
-      timeLeft = settings.time;
-      updateTimeDisplay();
-      inputField.value = '';
-      resultsDisplay.textContent = '';
-      score = 0;
-      wordsTyped = 0;
-      typingSpeeds = [];
-      averageTypingSpeed = 0;
-      updateScore();
-      updateSpeed();
-      
-      // Afficher le premier mot directement
-      currentWord = settings.words[Math.floor(Math.random() * settings.words.length)];
-      wordDisplay.textContent = currentWord;
-      wordDisplay.style.color = 'var(--correct)';
-      
-      // Afficher un exemple de mot difficile
-      challengeWord.textContent = "Exemple: " + settings.words[Math.floor(Math.random() * settings.words.length)];
-      challengeWord.style.display = 'block';
-      
-      inputField.setAttribute('placeholder', 'Appuyez sur Entrée pour commencer...');
-      inputField.disabled = false;
-      
-      // Configurer l'écouteur d'événement pour commencer
-      inputField.addEventListener('keypress', startGameOnEnter);
+    if (timeLeft <= 0) {
+      endGame(false); // Temps écoulé
     }
+  }, 1000);
+}
 
-    // Démarrer le jeu quand l'utilisateur appuie sur Entrée
-    function startGameOnEnter(e) {
-      if (e.key === 'Enter') {
-        inputField.removeEventListener('keypress', startGameOnEnter);
-        startGame();
-      }
-    }
+function endGame(completedAllWords) {
+  clearInterval(gameTimer);
+  const accuracy = calculateAccuracy();
+  
+  if (completedAllWords) {
+    endMessage.innerHTML = `
+      <h2>Niveau terminé!</h2>
+      <p>Vous avez complété tous les mots en mode ${difficulty}!</p>
+      <p>Score: ${score}</p>
+      <p>Vitesse: ${wpmDisplay.textContent} mots/minute</p>
+      <p>Précision: ${accuracy}%</p>
+    `;
+    continueBtn.style.display = "none";
+  } else {
+    endMessage.innerHTML = `
+      <h2>Temps écoulé!</h2>
+      <p>Score: ${score}</p>
+      <p>Vitesse: ${wpmDisplay.textContent} mots/minute</p>
+      <p>Précision: ${accuracy}%</p>
+    `;
+    continueBtn.style.display = "block";
+  }
+  
+  endScreen.style.display = "flex";
+}
 
-    // Démarrer le jeu
-    function startGame() {
-      if (isPlaying) return;
-      
-      isPlaying = true;
-      challengeWord.style.display = 'none';
-      inputField.setAttribute('placeholder', 'Tapez le mot ici...');
-      
-      // Démarrer le timer
-      startTimer();
-      
-      // Générer le premier mot
-      newWord();
-      
-      // Focus sur le champ de saisie
-      inputField.focus();
-      
-      // Enregistrer l'heure de début pour calculer le WPM
-      startTime = Date.now();
-      lastTypedTime = startTime;
-    }
 
-    // Générer un nouveau mot
-    function newWord() {
-      const settings = difficultySettings[currentDifficulty];
-      currentWord = settings.words[Math.floor(Math.random() * settings.words.length)];
-      wordDisplay.textContent = currentWord;
-      wordDisplay.classList.remove('correct', 'wrong');
-      inputField.value = '';
-    }
+inputField.addEventListener("input", (e) => {
+  const typedText = e.target.value;
+  charactersTyped++;
+  
+  if (typedText === currentWord) {
+    correctCharacters += currentWord.length;
+    score++;
+    e.target.value = "";
+    updateDisplay();
+    
+    if (difficulty === "easy") timeLeft += 5;
+    else if (difficulty === "medium") timeLeft += 3;
+    else timeLeft += 2;
+    
+    getNewWord();
+  } else if (!currentWord.startsWith(typedText)) {
+    e.target.value = "";
+  }
+});
 
-    // Mettre à jour l'affichage du temps
-    function updateTimeDisplay() {
-      timeDisplay.textContent = `${timeLeft} s`;
-      const percentage = (timeLeft / difficultySettings[currentDifficulty].time) * 100;
-      timeBar.style.width = `${percentage}%`;
-      
-      // Changement de couleur selon le temps restant
-      if (timeLeft <= 5) {
-        timeBar.style.background = 'var(--error)';
-      } else if (timeLeft <= 10) {
-        timeBar.style.background = 'var(--accent)';
-      } else {
-        timeBar.style.background = 'linear-gradient(90deg, var(--accent), var(--primary))';
-      }
-    }
 
-    // Mettre à jour le score
-    function updateScore() {
-      scoreDisplay.textContent = score;
-    }
+continueBtn.addEventListener("click", initGame);
 
-    // Mettre à jour la vitesse en pourcentage
-    function updateSpeed() {
-      if (typingSpeeds.length > 0) {
-        const sum = typingSpeeds.reduce((a, b) => a + b, 0);
-        averageTypingSpeed = Math.round(sum / typingSpeeds.length);
-      } else {
-        averageTypingSpeed = 0;
-      }
-      
-      // Calculer le pourcentage par rapport à la vitesse de base de la difficulté
-      const percentage = Math.min(Math.round((averageTypingSpeed / difficultySettings[currentDifficulty].baseSpeed) * 100), 200);
-      wpmDisplay.textContent = percentage;
-    }
 
-    // Timer du jeu
-    function startTimer() {
-      clearInterval(timer);
-      timer = setInterval(() => {
-        timeLeft--;
-        updateTimeDisplay();
-        
-        if (timeLeft <= 0) {
-          endGame();
-        }
-      }, 1000);
-    }
+changeDifficultyBtn.addEventListener("click", () => {
+  if (difficulty === "easy") difficulty = "medium";
+  else if (difficulty === "medium") difficulty = "hard";
+  else difficulty = "easy";
+  
+  modeSelect.value = difficulty;
+  localStorage.setItem('difficulty', difficulty);
+  initGame();
+});
 
-    // Fin du jeu
-    function endGame() {
-      clearInterval(timer);
-      isPlaying = false;
-      inputField.blur();
-      inputField.disabled = true;
-      wordDisplay.textContent = 'Jeu terminé !';
-      wordDisplay.style.color = 'var(--error)';
-      resultsDisplay.textContent = `Score final: ${score} | Mots tapés: ${wordsTyped} | Vitesse max: ${Math.max(...typingSpeeds, 0)}%`;
-      inputField.setAttribute('placeholder', 'Cliquez sur Rejouer');
-      restartBtn.style.display = 'block';
-    }
+modeSelect.addEventListener("change", () => {
+  difficulty = modeSelect.value;
+  localStorage.setItem('difficulty', difficulty);
+  initGame();
+});
 
-    // Vérifier la saisie de l'utilisateur
-    inputField.addEventListener('input', () => {
-      if (!isPlaying) return;
-      
-      const typedText = inputField.value;
-      const now = Date.now();
-      
-      if (typedText === currentWord) {
-        // Mot correctement tapé
-        wordsTyped++;
-        score += currentWord.length * (currentDifficulty === 'easy' ? 1 : currentDifficulty === 'medium' ? 2 : 3);
-        
-        // Calculer la vitesse pour ce mot (caractères par seconde)
-        const timeTaken = (now - lastTypedTime) / 1000; // en secondes
-        const charsPerSecond = currentWord.length / timeTaken;
-        const speedPercentage = Math.round((charsPerSecond / 5) * 100); // 5 cps = 100%
-        
-        typingSpeeds.push(speedPercentage);
-        
-        updateScore();
-        updateSpeed();
-        
-        // Animation de réussite
-        wordDisplay.classList.add('correct');
-        
-        // Réinitialiser le temps pour le prochain mot
-        timeLeft = difficultySettings[currentDifficulty].time;
-        updateTimeDisplay();
-        
-        // Nouveau mot après un léger délai
-        setTimeout(() => {
-          newWord();
-          lastTypedTime = Date.now();
-        }, 300);
-      } else if (currentWord.startsWith(typedText)) {
-        // Mot partiellement correct
-        wordDisplay.style.color = 'var(--correct)';
-      } else {
-        // Erreur de frappe
-        wordDisplay.style.color = 'var(--error)';
-        wordDisplay.classList.add('wrong');
-      }
-    });
-
-    // Changer la difficulté
-    modeSelector.addEventListener('change', () => {
-      if (!isPlaying) {
-        initGame();
-      }
-    });
-
-    // Bouton Rejouer
-    restartBtn.addEventListener('click', () => {
-      initGame();
-    });
-
-    // Initialiser le jeu au chargement
-    initGame();
-  });
+window.addEventListener("DOMContentLoaded", initGame);
